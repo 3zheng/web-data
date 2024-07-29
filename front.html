@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Users</title>
+    <script>
+        async function fetchUsers() {
+            const response = await fetch('/users');
+            const users = await response.json();
+            let table = '<table><tr><th>ID</th><th>Name</th><th>Age</th><th>Email</th></tr>';
+            users.forEach(user => {
+                table += `<tr><td>${user.ID}</td><td>${user.Name}</td><td>${user.Age}</td><td>${user.Email}</td></tr>`;
+            });
+            table += '</table>';
+            document.getElementById('userTable').innerHTML = table;
+        }
+        window.onload = fetchUsers;
+    </script>
+</head>
+<body>
+    <div id="userTable"></div>
+</body>
+</html>
