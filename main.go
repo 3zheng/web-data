@@ -37,8 +37,8 @@ func main() {
 	}
 
 	// Now let's unmarshall the data into `payload`
-
-	err = json.Unmarshal(content, &payload)
+	var config Config
+	err = json.Unmarshal(content, &config)
 	if err != nil {
 		log.Fatal("Error during Unmarshal(): ", err)
 	}
