@@ -3,7 +3,9 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"log"
+	"net/http"
 	"os"
 
 	tablestruct "github.com/3zheng/webdata/table_struct"
@@ -12,7 +14,7 @@ import (
 )
 
 type DBConfig struct {
-	Server   string `json:"server"`
+	IP       string `json:"ip"`
 	Port     int    `json:"port"`
 	DB       string `json:"database"`
 	UserId   string `json:"user id"`
@@ -42,8 +44,10 @@ func main() {
 	if err != nil {
 		log.Fatal("Error during Unmarshal(): ", err)
 	}
+	//connString := "server=127.0.0.1;port=38336;database=user;user id=admin;password=123456"
+	connString := fmt.Sprintf("server=%s;port=%d;database=%s;user id=%s;password=%s",
+		config.Database.IP, config.Database.Port, config.Database.DB, config.Database.UserId, config.Database.Password)
 
-	connString := "server=127.0.0.1;port=38336;database=user;user id=admin;password=123456"
 	//建立数据库连接：db
 	db, err := sql.Open("mssql", connString)
 	if err != nil {
@@ -51,15 +55,23 @@ func main() {
 	}
 	defer db.Close()
 
+	//release模式
+	//gin.SetMode(gin.ReleaseMode)
+
 	r := gin.Default()
+	r.LoadHTMLGlob("HTML/*") //加载HTML文件
 
 	r.GET("/KC", func(c *gin.Context) {
 		//var inventories [](*tablestruct.Inventory)
 		inventories := GetInventory(db)
-		c.JSON(200, inventories)
+		c.HTML(http.StatusOK, "index.html", gin.H{
+			"data": inventories,
+		})
+		//c.JSON(200, inventories)
 	})
 
-	r.Run()
+	addr := fmt.Sprintf(":%d", config.Server.Port)
+	r.Run(addr)
 }
 
 func GetInventory(db *sql.DB) [](*tablestruct.Inventory) {
