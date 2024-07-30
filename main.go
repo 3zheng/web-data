@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
 
@@ -21,9 +22,12 @@ type DBConfig struct {
 	Password string `json:"password"`
 }
 
+// IP   string `json:"ip"`
 type ServerConfig struct {
-	Name string `json:"name"`
-	Port int    `json:"port"`
+	Name      string `json:"name"`
+	ForceIPv4 int    `json:"force ipv4"`
+	IP        string `json:"ip"`
+	Port      int    `json:"port"`
 }
 
 type Config struct {
@@ -70,8 +74,24 @@ func main() {
 		//c.JSON(200, inventories)
 	})
 
-	addr := fmt.Sprintf(":%d", config.Server.Port)
-	r.Run(addr)
+	addr := fmt.Sprintf("%s:%d", config.Server.IP, config.Server.Port)
+	//ln := net.Listener
+	if config.Server.ForceIPv4 == 1 {
+		// 强制使用IPv4
+		server := &http.Server{Addr: addr, Handler: r}
+		ln, err := net.Listen("tcp4", addr)
+		if err != nil {
+			panic(err)
+		}
+		type tcpKeepAliveListener struct {
+			*net.TCPListener
+		}
+
+		server.Serve(tcpKeepAliveListener{ln.(*net.TCPListener)})
+	} else {
+		r.Run(addr)
+	}
+	//r.Run(addr)
 }
 
 func GetInventory(db *sql.DB) [](*tablestruct.Inventory) {
