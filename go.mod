@@ -5,10 +5,10 @@ go 1.21.6
 require (
 	github.com/denisenkom/go-mssqldb v0.12.3
 	github.com/gin-gonic/gin v1.10.0
-	github.com/3zheng/webdata/table_struct v0.0.0
+	github.com/3zheng/webdata/table_middleware v0.0.0
 )
 
-replace github.com/3zheng/webdata/table_struct v0.0.0 => ./table_struct
+replace github.com/3zheng/webdata/table_middleware v0.0.0 => ./table_middleware
 
 require (
 	github.com/bytedance/sonic v1.11.6 // indirect

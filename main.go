@@ -9,9 +9,9 @@ import (
 	"net/http"
 	"os"
 
-	tablestruct "github.com/3zheng/webdata/table_struct"
 	_ "github.com/denisenkom/go-mssqldb"
 	"github.com/gin-gonic/gin"
+	tablemiddleware "githuh.com/3zheng/web-data/table_middleware"
 )
 
 type DBConfig struct {
@@ -35,8 +35,18 @@ type Config struct {
 	Server   ServerConfig `json:"server config"`
 }
 
-func main() {
+func InitLog() {
+	logFile, err := os.OpenFile("./logfile", os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
+	if err != nil {
+		fmt.Println("open log file failed.")
+		return
+	}
+	log.SetOutput(logFile)
+	log.SetFlags(log.LstdFlags | log.Lshortfile | log.Ltime)
+}
 
+func main() {
+	InitLog()
 	content, err := os.ReadFile("./config.json")
 	if err != nil {
 		log.Fatal("Error when opening file: ", err)
@@ -67,13 +77,14 @@ func main() {
 
 	r.GET("/KC", func(c *gin.Context) {
 		//var inventories [](*tablestruct.Inventory)
-		inventories := GetInventory(db)
+		fmt.Println("/KC GET require")
+		inventories := tablemiddleware.GetInventory(db)
 		c.HTML(http.StatusOK, "index.html", gin.H{
 			"data": inventories,
 		})
 		//c.JSON(200, inventories)
 	})
-
+	log.Println("开始启动web服务")
 	addr := fmt.Sprintf("%s:%d", config.Server.IP, config.Server.Port)
 	//ln := net.Listener
 	if config.Server.ForceIPv4 == 1 {
@@ -92,27 +103,4 @@ func main() {
 		r.Run(addr)
 	}
 	//r.Run(addr)
-}
-
-func GetInventory(db *sql.DB) [](*tablestruct.Inventory) {
-	//编写查询语句
-	stmt, err := db.Prepare(`select 产品型号, 产品名称, 库存数量 from dbo.View_KC`)
-	if err != nil {
-		log.Fatal("Prepare failed:", err.Error())
-	}
-	defer stmt.Close()
-	//执行查询语句
-	rows, err := stmt.Query()
-	if err != nil {
-		log.Fatal("Query failed:", err.Error())
-	}
-	//将数据读取到实体中
-	var rowsData [](*tablestruct.Inventory)
-	for rows.Next() {
-		data := new(tablestruct.Inventory)
-		//其中一个字段的信息 ， 如果要获取更多，就在后面增加：rows.Scan(&row.Name,&row.Id)
-		rows.Scan(&data.ProductID, &data.ProductName, &data.ResidualNum)
-		rowsData = append(rowsData, data)
-	}
-	return rowsData
 }
