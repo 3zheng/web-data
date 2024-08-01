@@ -3,7 +3,7 @@ Description=webdata server
 
 [Service]
 Type=simple
-ExecStart=/home/wuzhibin86/workspace/web-data/WebData
+ExecStart=/home/wuzhibin86/workspace/web-data/WebData -config /usr/local/etc/webdata/config.json
 ExecReload=/bin/kill -HUP $MAINPID
 KillMode=process
 Restart=on-failure
