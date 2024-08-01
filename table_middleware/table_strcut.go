@@ -27,9 +27,9 @@ func GetInventory(db *sql.DB) [](*Inventory) {
 		log.Fatal("Query failed:", err.Error())
 	}
 	//将数据读取到实体中
-	var rowsData [](*tablestruct.Inventory)
+	var rowsData [](*Inventory)
 	for rows.Next() {
-		data := new(tablestruct.Inventory)
+		data := new(Inventory)
 		//其中一个字段的信息 ， 如果要获取更多，就在后面增加：rows.Scan(&row.Name,&row.Id)
 		rows.Scan(&data.ProductID, &data.ProductName, &data.ResidualNum)
 		rowsData = append(rowsData, data)

@@ -9,9 +9,9 @@ import (
 	"net/http"
 	"os"
 
+	tablemiddleware "github.com/3zheng/web-data/table_middleware"
 	_ "github.com/denisenkom/go-mssqldb"
 	"github.com/gin-gonic/gin"
-	tablemiddleware "githuh.com/3zheng/web-data/table_middleware"
 )
 
 type DBConfig struct {
@@ -47,6 +47,7 @@ func InitLog() {
 
 func main() {
 	InitLog()
+	//读取配置文件
 	content, err := os.ReadFile("./config.json")
 	if err != nil {
 		log.Fatal("Error when opening file: ", err)
