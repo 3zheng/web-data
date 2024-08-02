@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>欠款</title>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid black;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+    <h1>Debt List</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>DebtorName</th>
+                <th>DebtAmount</th>
+                <th>CurrencyUnit</th>
+                <th>OrderFormDate</th>
+                <th>DebtDuration</th>
+                <th>DateUnit</th>
+                <th>Salesman</th>
+                <th>DebtorID</th>
+                <th>SalesmanID</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{range .data}}
+            <tr>
+                <td>{{.DebtorName}}</td>
+                <td>{{.DebtAmount}}</td>
+                <td>{{.CurrencyUnit}}</td>
+                <td>{{.OrderFormDate}}</td>
+                <td>{{.DebtDuration}}</td>
+                <td>{{.DateUnit}}</td>
+                <td>{{.Salesman}}</td>
+                <td>{{.DebtorID}}</td>
+                <td>{{.SalesmanID}}</td>
+            </tr>
+            {{end}}
+        </tbody>
+    </table>
+</body>
+</html>

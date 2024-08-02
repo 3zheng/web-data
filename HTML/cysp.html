@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>重点客户</title>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid black;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+    <h1>Important Customer List</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>CustomerID</th>
+                <th>CustomerName</th>
+                <th>Month</th>
+                <th>ConsumptionAmount</th>
+                <th>ConsumptionTimes</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{range .data}}
+            <tr>
+                <td>{{.CustomerID}}</td>
+                <td>{{.CustomerName}}</td>
+                <td>{{.Month}}</td>
+                <td>{{.ConsumptionAmount}}</td>
+                <td>{{.ConsumptionTimes}}</td>
+            </tr>
+            {{end}}
+        </tbody>
+    </table>
+</body>
+</html>

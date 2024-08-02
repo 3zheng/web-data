@@ -115,15 +115,74 @@ func main() {
 	log.Println(htmlPath)
 	r.LoadHTMLGlob(htmlPath) //加载HTML文件
 
+	//注册http路由
 	r.GET("/KC", func(c *gin.Context) {
 		//var inventories [](*tablestruct.Inventory)
-		fmt.Println("/KC GET require")
-		inventories := tablemiddleware.GetInventory(db)
+		log.Println("/KC GET require")
+		datas := tablemiddleware.GetInventory(db)
 		c.HTML(http.StatusOK, "index.html", gin.H{
-			"data": inventories,
+			"data": datas,
 		})
 		//c.JSON(200, inventories)
 	})
+	r.GET("/KC2", func(c *gin.Context) {
+		//var inventories [](*tablestruct.Inventory)
+		log.Println("/KC2 GET require")
+		datas := tablemiddleware.GetInventorySummary(db)
+		c.HTML(http.StatusOK, "kc2.html", gin.H{
+			"data": datas,
+		})
+		//c.JSON(200, inventories)
+	})
+	r.GET("/QK", func(c *gin.Context) {
+		//var inventories [](*tablestruct.Inventory)
+		log.Println("/QK GET require")
+		datas := tablemiddleware.GetDebt(db)
+		c.HTML(http.StatusOK, "qk.html", gin.H{
+			"data": datas,
+		})
+		//c.JSON(200, inventories)
+	})
+	r.GET("/XS1", func(c *gin.Context) {
+		//var inventories [](*tablestruct.Inventory)
+		log.Println("/XS1 GET require")
+		datas := tablemiddleware.GetSalesman(db)
+		c.HTML(http.StatusOK, "xs1.html", gin.H{
+			"data": datas,
+		})
+		//c.JSON(200, inventories)
+	})
+	r.GET("/CYSP", func(c *gin.Context) {
+		//var inventories [](*tablestruct.Inventory)
+		log.Println("/CYSP GET require")
+		datas := tablemiddleware.GetImportantCustomer(db)
+		c.HTML(http.StatusOK, "cysp.html", gin.H{
+			"data": datas,
+		})
+		//c.JSON(200, inventories)
+	})
+	r.GET("/LKC", func(c *gin.Context) {
+		//var inventories [](*tablestruct.Inventory)
+		log.Println("/QK GET require")
+		datas := tablemiddleware.GetLostImportantCustomeromer(db)
+		if datas == nil {
+			c.JSON(http.StatusRequestTimeout, "数据库连接出错")
+		}
+		c.HTML(http.StatusOK, "lkc.html", gin.H{
+			"data": datas,
+		})
+		//c.JSON(200, inventories)
+	})
+	r.GET("/NKC", func(c *gin.Context) {
+		//var inventories [](*tablestruct.Inventory)
+		log.Println("/QK GET require")
+		datas := tablemiddleware.GetNewImportantCustomer(db)
+		c.HTML(http.StatusOK, "nkc.html", gin.H{
+			"data": datas,
+		})
+		//c.JSON(200, inventories)
+	})
+
 	log.Println("开始启动web服务")
 	addr := fmt.Sprintf("%s:%d", config.Server.IP, config.Server.Port)
 	//ln := net.Listener

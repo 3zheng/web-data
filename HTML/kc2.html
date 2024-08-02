@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>库存</title>
+    <title>总体库存</title>
     <style>
         table {
             width: 100%;
@@ -19,7 +19,7 @@
     </style>
 </head>
 <body>
-    <h1>Inventory List</h1>
+    <h1>Total Inventory List</h1>
     <table>
         <thead>
             <tr>
@@ -29,12 +29,9 @@
                 <th>Subclass</th>
                 <th>ProductSuperClass</th>
                 <th>ProductUnitName</th>
-                <th>CityName</th>
-                <th>WarehouseName</th>
                 <th>ResidualNum</th>
                 <th>InventoryCost</th>
                 <th>SalesQuantity30days</th>
-                <th>UnsalableScale</th>
             </tr>
         </thead>
         <tbody>
@@ -46,12 +43,9 @@
                 <td>{{.ProductSubclass}}</td>
                 <td>{{.ProductSuperClass}}</td>
                 <td>{{.ProductUnitName}}</td>
-                <td>{{.CityName}}</td>
-                <td>{{.WarehouseName}}</td>
                 <td>{{.ResidualNum}}</td>
                 <td>{{.InventoryCost}}</td>
                 <td>{{.SalesQuantity30days}}</td>
-                <td>{{.UnsalableScale}}</td>
             </tr>
             {{end}}
         </tbody>

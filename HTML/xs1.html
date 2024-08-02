@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>销售员</title>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid black;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+    <h1>Salesman List</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>SalesDate</th>
+                <th>Name</th>
+                <th>SalesAmount</th>
+                <th>OrderFormNum</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{range .data}}
+            <tr>
+                <td>{{.SalesDate}}</td>
+                <td>{{.Name}}</td>
+                <td>{{.SalesAmount}}</td>
+                <td>{{.OrderFormNum}}</td>
+            </tr>
+            {{end}}
+        </tbody>
+    </table>
+</body>
+</html>
