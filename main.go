@@ -12,7 +12,9 @@ import (
 
 	tablemiddleware "github.com/3zheng/web-data/table_middleware"
 	_ "github.com/denisenkom/go-mssqldb"
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	_ "github.com/go-sql-driver/mysql"
 )
 
 type DBConfig struct {
@@ -32,8 +34,9 @@ type ServerConfig struct {
 }
 
 type Config struct {
-	Database DBConfig     `json:"database config"`
-	Server   ServerConfig `json:"server config"`
+	Database  DBConfig     `json:"database config"`
+	Server    ServerConfig `json:"server config"`
+	MysqlConn string       `json:"mysqlConn"`
 }
 
 func InitLog() {
@@ -58,59 +61,19 @@ func InitLog() {
 
 }
 
-func recovermain() {
+func Recovermain() {
 	if err := recover(); err != nil {
 		var buf [4096]byte
 		n := runtime.Stack(buf[:], false)
-		log.Fatalf("[panic] err: %v\nstack: %s\n", err, buf[:n])
+		log.Printf("[panic] err: %v\nstack: %s\n", err, buf[:n])
 	}
 }
 
-func main() {
-	defer recovermain() //退出前打印异常
-	InitLog()
-	//读取配置文件
-	args := os.Args //main命令行参数
-	log.Println("main args = ", args)
-
-	var content []byte
-	var err error
-	//这时候如果不输入的命令行参数就会导致panic
-	if args[1] == "-config" {
-		log.Println("读取配置文件：", args[2])
-		content, err = os.ReadFile(args[2])
-		if err != nil {
-			log.Fatal("Error when opening file: ", err)
-		}
-	} else { //不带参数直接返回
-		return
-	}
-
-	//tablemiddleware.CreatePanic()
-	// Now let's unmarshall the data into `payload`
-	var config Config
-	err = json.Unmarshal(content, &config)
-	if err != nil {
-		log.Fatal("Error during Unmarshal(): ", err)
-	}
-	//connString := "server=127.0.0.1;port=38336;database=user;user id=admin;password=123456"
-	connString := fmt.Sprintf("server=%s;port=%d;database=%s;user id=%s;password=%s",
-		config.Database.IP, config.Database.Port, config.Database.DB, config.Database.UserId, config.Database.Password)
-
-	//建立数据库连接：db
-	db, err := sql.Open("mssql", connString)
-	if err != nil {
-		log.Fatal("Open Connection failed:", err.Error())
-	}
-	defer db.Close()
-
-	//release模式
-	//gin.SetMode(gin.ReleaseMode)
-
-	r := gin.Default()
-	htmlPath := "HTML/*"
+// 设置http路由,直接返回Html
+func SetGinRouterByHtml(r *gin.Engine, db *sql.DB, projectPath string) {
+	htmlPath := "HTML/*.html"
 	if runtime.GOOS == "linux" {
-		htmlPath = config.Server.Path + htmlPath
+		htmlPath = projectPath + htmlPath
 	}
 	log.Println(htmlPath)
 	r.LoadHTMLGlob(htmlPath) //加载HTML文件
@@ -182,6 +145,113 @@ func main() {
 		})
 		//c.JSON(200, inventories)
 	})
+}
+
+// 返回内容为json格式的字符串
+func SetGinRouterByJson(r *gin.Engine, db *sql.DB) {
+	r.GET("/KC", func(c *gin.Context) {
+		//var inventories [](*tablestruct.Inventory)
+		log.Println("/KC GET require")
+		datas := tablemiddleware.GetInventory(db)
+		c.JSON(200, datas)
+	})
+	r.GET("/KC2", func(c *gin.Context) {
+		//var inventories [](*tablestruct.Inventory)
+		log.Println("/KC2 GET require")
+		datas := tablemiddleware.GetInventorySummary(db)
+		c.JSON(200, datas)
+	})
+	r.GET("/QK", func(c *gin.Context) {
+		//var inventories [](*tablestruct.Inventory)
+		log.Println("/QK GET require")
+		datas := tablemiddleware.GetDebt(db)
+		c.JSON(200, datas)
+	})
+	r.GET("/XS1", func(c *gin.Context) {
+		//var inventories [](*tablestruct.Inventory)
+		log.Println("/XS1 GET require")
+		datas := tablemiddleware.GetSalesman(db)
+		c.JSON(200, datas)
+	})
+	r.GET("/CYSP", func(c *gin.Context) {
+		//var inventories [](*tablestruct.Inventory)
+		log.Println("/CYSP GET require")
+		datas := tablemiddleware.GetImportantCustomer(db)
+		c.JSON(200, datas)
+	})
+	r.GET("/LKC", func(c *gin.Context) {
+		//var inventories [](*tablestruct.Inventory)
+		log.Println("/QK GET require")
+		datas := tablemiddleware.GetLostImportantCustomeromer(db)
+		c.JSON(200, datas)
+	})
+	r.GET("/NKC", func(c *gin.Context) {
+		//var inventories [](*tablestruct.Inventory)
+		log.Println("/QK GET require")
+		datas := tablemiddleware.GetNewImportantCustomer(db)
+		c.JSON(200, datas)
+	})
+
+	//从mysql数据库里取数据
+	r.GET("/wp1", func(c *gin.Context) {
+		//var inventories [](*tablestruct.Inventory)
+		log.Println("/QK GET require")
+		datas := tablemiddleware.GetWordpress(db)
+		c.JSON(200, datas)
+	})
+}
+
+func main() {
+	defer Recovermain() //退出前打印异常
+	InitLog()
+	//读取配置文件
+	args := os.Args //main命令行参数
+	log.Println("main args = ", args)
+
+	var content []byte
+	var err error
+	//这时候如果不输入的命令行参数就会导致panic
+	if args[1] == "-config" {
+		log.Println("读取配置文件：", args[2])
+		content, err = os.ReadFile(args[2])
+		if err != nil {
+			log.Fatal("Error when opening file: ", err)
+		}
+	} else { //不带参数直接返回
+		return
+	}
+
+	//tablemiddleware.CreatePanic()
+	// Now let's unmarshall the data into `payload`
+	var config Config
+	err = json.Unmarshal(content, &config)
+	if err != nil {
+		log.Fatal("Error during Unmarshal(): ", err)
+	}
+
+	//mysql的连接字符串格式
+	//connString := "username:password@tcp(127.0.0.1:3306)/dbname?charset=utf8"
+
+	connString := fmt.Sprintf("server=%s;port=%d;database=%s;user id=%s;password=%s",
+		config.Database.IP, config.Database.Port, config.Database.DB, config.Database.UserId, config.Database.Password)
+
+	//建立SQLSever数据库连接：db
+
+	db, err := sql.Open("mssql", connString)
+	if err != nil {
+		log.Fatal("Open Connection failed:", err.Error())
+	}
+
+	//db, err := sql.Open("mysql", connString)
+	defer db.Close()
+
+	//release模式
+	//gin.SetMode(gin.ReleaseMode)
+
+	r := gin.Default()
+	r.Use(cors.Default()) //使用cors，解决跨域问题
+	//SetGinRouterByHtml(r, db, config.Server.Path)//直接返回Html网页，把前端后端放一起
+	SetGinRouterByJson(r, db) //返回json数据，前端后端分离，后端只返回数据，前端不管
 
 	log.Println("开始启动web服务")
 	addr := fmt.Sprintf("%s:%d", config.Server.IP, config.Server.Port)
