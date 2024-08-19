@@ -12,7 +12,7 @@
             "program": "${workspaceRoot}/main.go", // main.go文件路径
             //"buildFlags":"-mod=vendor", // 使用vendor模式或者为空
             //"env": {"xxxEnv":"on"}, // 自定义环境变量
-            "args": ["-config","C:/Users/ASUS/Documents/linuxFile/config.json"] // 自定义启动参数
+            "args": ["-config","config.json"] // 自定义启动参数
         }
     ]
 }
