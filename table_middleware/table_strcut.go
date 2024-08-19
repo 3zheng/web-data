@@ -35,8 +35,9 @@ type Inventory struct {
 func GetInventory(db *sql.DB) [](*Inventory) {
 	//编写查询语句
 	//select 产品型号,产品名称,产品描述,产品类型名称,主类型名称,产品单位名称,城市名称,仓库名称,库存数量,库存成本,最近30天销售数量,消纳时间 from dbo.View_KC
-	sqlStr := `select 产品型号,产品名称,产品描述,产品类型名称,主类型名称,产品单位名称,` +
-		`城市名称,仓库名称,库存数量,库存成本,最近30天销售数量,消纳时间 from dbo.View_KC`
+	sqlStr := `select trim(产品型号),trim(产品名称),trim(产品描述),trim(产品类型名称),trim(主类型名称),trim(产品单位名称),` +
+		`trim(城市名称),trim(仓库名称),库存数量,库存成本,最近30天销售数量,消纳时间 ` +
+		`from dbo.View_KC order by 产品型号,仓库名称`
 	//sqlStr := `select 产品型号,产品名称,最近30天销售数量,消纳时间 from dbo.View_KC`
 	stmt, err := db.Prepare(sqlStr)
 	if err != nil {
@@ -82,8 +83,8 @@ type InventorySummary struct {
 func GetInventorySummary(db *sql.DB) [](*InventorySummary) {
 	//编写查询语句
 	//select 产品型号,产品名称,产品描述,产品类型名称,主类型名称,产品单位名称,库存数量,库存成本,最近30天销售数量 from View_KC2
-	stmt, err := db.Prepare(`select 产品型号,产品名称,产品描述,产品类型名称,主类型名称,
-		产品单位名称,库存数量,库存成本,最近30天销售数量 
+	stmt, err := db.Prepare(`select trim(产品型号),trim(产品名称),trim(产品描述),trim(产品类型名称),trim(主类型名称),
+		trim(产品单位名称),库存数量,库存成本,最近30天销售数量 
 		from View_KC2`)
 	if err != nil {
 		log.Println("Prepare failed:", err.Error())
@@ -126,8 +127,8 @@ type Debt struct {
 func GetDebt(db *sql.DB) [](*Debt) {
 	//编写查询语句
 	//select 欠款客户名称,欠款金额,金额单位,欠款订单时间,欠款时长,时间单位,销售员,欠款客户编号,销售员编号 from dbo.View_QK
-	stmt, err := db.Prepare(`select 欠款客户名称,欠款金额,金额单位,欠款订单时间,欠款时长,
-		时间单位,销售员,欠款客户编号,销售员编号 from dbo.View_QK`)
+	stmt, err := db.Prepare(`select trim(欠款客户名称),欠款金额,trim(金额单位),欠款订单时间,欠款时长,
+		trim(时间单位),trim(销售员),欠款客户编号,销售员编号 from dbo.View_QK`)
 	if err != nil {
 		log.Println("Prepare failed:", err.Error())
 		return nil
@@ -165,7 +166,7 @@ type Salesman struct {
 func GetSalesman(db *sql.DB) [](*Salesman) {
 	//编写查询语句
 	//select 销售日期,销售员姓名,销售总金额,订单数量 from dbo.View_XS1
-	stmt, err := db.Prepare(`select 销售日期,销售员姓名,销售总金额,订单数量 from dbo.View_XS1`)
+	stmt, err := db.Prepare(`select 销售日期,trim(销售员姓名),销售总金额,订单数量 from dbo.View_XS1`)
 	if err != nil {
 		log.Println("Prepare failed:", err.Error())
 		return nil
