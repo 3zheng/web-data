@@ -163,10 +163,11 @@ type Salesman struct {
 	OrderFormNum int     `json:"OrderFormNum"` //订单数量
 }
 
-func GetSalesman(db *sql.DB) [](*Salesman) {
+// 销售员的每日销售记录
+func GetSalesRecord(db *sql.DB) [](*Salesman) {
 	//编写查询语句
 	//select 销售日期,销售员姓名,销售总金额,订单数量 from dbo.View_XS1
-	stmt, err := db.Prepare(`select 销售日期,trim(销售员姓名),销售总金额,订单数量 from dbo.View_XS1`)
+	stmt, err := db.Prepare(`select 销售日期,trim(销售员姓名),销售总金额,订单数量 from dbo.View_XS1 order by 销售日期 desc`)
 	if err != nil {
 		log.Println("Prepare failed:", err.Error())
 		return nil
@@ -186,6 +187,39 @@ func GetSalesman(db *sql.DB) [](*Salesman) {
 		//其中一个字段的信息 ， 如果要获取更多，就在后面增加：rows.Scan(&row.Name,&row.Id)
 		rows.Scan(&SalesDate, &data.Name, &data.SalesAmount, &data.OrderFormNum)
 		data.SalesDate = SalesDate.Format(time.DateOnly)
+		rowsData = append(rowsData, data)
+	}
+	return rowsData
+}
+
+// 和Salesman同一张表
+type SalesSummary struct {
+	Salesman        string  `json:"Salesman"`     //销售员
+	SalesAmount     float64 `json:"SalesAmount"`  //销售总额
+	OrderFormAmount int     `json:"OrderFormNum"` //成交总单数
+}
+
+func GetSalesSummary(db *sql.DB) [](*SalesSummary) {
+	//编写查询语句
+	//select 客户ID,客户姓名,月开始日期,月购买总金额,月购买次数 from dbo.CustomerYearlySalesReport
+	stmt, err := db.Prepare(`select trim(销售员姓名), sum(销售总金额), sum(订单数量) from View_XS1 group by 销售员姓名`)
+	if err != nil {
+		log.Println("Prepare failed:", err.Error())
+		return nil
+	}
+	defer stmt.Close()
+	//执行查询语句
+	rows, err := stmt.Query()
+	if err != nil {
+		log.Println("Query failed:", err.Error())
+		return nil
+	}
+	//将数据读取到实体中
+	var rowsData [](*SalesSummary)
+	for rows.Next() {
+		data := new(SalesSummary)
+		//其中一个字段的信息 ， 如果要获取更多，就在后面增加：rows.Scan(&row.Name,&row.Id)
+		rows.Scan(&data.Salesman, &data.SalesAmount, &data.OrderFormAmount)
 		rowsData = append(rowsData, data)
 	}
 	return rowsData

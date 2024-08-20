@@ -109,7 +109,7 @@ func SetGinRouterByHtml(r *gin.Engine, db *sql.DB, projectPath string) {
 	r.GET("/XS1", func(c *gin.Context) {
 		//var inventories [](*tablestruct.Inventory)
 		log.Println("/XS1 GET require")
-		datas := tablemiddleware.GetSalesman(db)
+		datas := tablemiddleware.GetSalesRecord(db)
 		c.HTML(http.StatusOK, "xs1.html", gin.H{
 			"data": datas,
 		})
@@ -145,50 +145,57 @@ func SetGinRouterByHtml(r *gin.Engine, db *sql.DB, projectPath string) {
 		})
 		//c.JSON(200, inventories)
 	})
+
 }
 
 // 返回内容为json格式的字符串
 func SetGinRouterByJson(r *gin.Engine, db *sql.DB) {
-	r.GET("/KC", func(c *gin.Context) {
+	r.GET("/api/inventory_warehouse", func(c *gin.Context) {
 		//var inventories [](*tablestruct.Inventory)
-		log.Println("/KC GET require")
+		log.Println("/inventory_warehouse GET require")
 		datas := tablemiddleware.GetInventory(db)
 		c.JSON(200, datas)
 	})
-	r.GET("/KC2", func(c *gin.Context) {
+	r.GET("/api/inventory_summary", func(c *gin.Context) {
 		//var inventories [](*tablestruct.Inventory)
-		log.Println("/KC2 GET require")
+		log.Println("/inventory_summary GET require")
 		datas := tablemiddleware.GetInventorySummary(db)
 		c.JSON(200, datas)
 	})
-	r.GET("/QK", func(c *gin.Context) {
+	r.GET("/api/debt", func(c *gin.Context) {
 		//var inventories [](*tablestruct.Inventory)
-		log.Println("/QK GET require")
+		log.Println("/debt GET require")
 		datas := tablemiddleware.GetDebt(db)
 		c.JSON(200, datas)
 	})
-	r.GET("/XS1", func(c *gin.Context) {
+	r.GET("/api/sales_record", func(c *gin.Context) {
 		//var inventories [](*tablestruct.Inventory)
-		log.Println("/XS1 GET require")
-		datas := tablemiddleware.GetSalesman(db)
+		log.Println("/sales_detail GET require")
+		datas := tablemiddleware.GetSalesRecord(db)
 		c.JSON(200, datas)
 	})
-	r.GET("/CYSP", func(c *gin.Context) {
+	r.GET("/api/key_customer", func(c *gin.Context) {
 		//var inventories [](*tablestruct.Inventory)
-		log.Println("/CYSP GET require")
+		log.Println("/key_customer GET require")
 		datas := tablemiddleware.GetImportantCustomer(db)
 		c.JSON(200, datas)
 	})
-	r.GET("/LKC", func(c *gin.Context) {
+	r.GET("/api/lost_key_customer", func(c *gin.Context) {
 		//var inventories [](*tablestruct.Inventory)
-		log.Println("/QK GET require")
+		log.Println("/lost_key_customer GET require")
 		datas := tablemiddleware.GetLostImportantCustomeromer(db)
 		c.JSON(200, datas)
 	})
-	r.GET("/NKC", func(c *gin.Context) {
+	r.GET("/api/new_key_customer", func(c *gin.Context) {
 		//var inventories [](*tablestruct.Inventory)
-		log.Println("/QK GET require")
+		log.Println("/new_key_customer GET require")
 		datas := tablemiddleware.GetNewImportantCustomer(db)
+		c.JSON(200, datas)
+	})
+	r.GET("/api/sales_summary", func(c *gin.Context) {
+		//var inventories [](*tablestruct.Inventory)
+		log.Println("/sales_summary GET require")
+		datas := tablemiddleware.GetSalesSummary(db)
 		c.JSON(200, datas)
 	})
 
