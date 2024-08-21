@@ -15,6 +15,97 @@ func CreatePanic() {
 	}
 }
 
+// 缓存，把数据库数据存放在MemoryCache里加快访问速度
+type MemoryCache struct {
+	db                        *sql.DB                  //数据库实例
+	InventoryData             []*Inventory             //仓储详情：按ID、仓库名排序
+	InventoryTime             time.Time                //数据更新时间
+	InventorySummaryData      []*InventorySummary      //仓储概述
+	InventorySummaryTime      time.Time                //数据更新时间
+	DebtData                  []*Debt                  //欠款信息
+	DebtTime                  time.Time                //数据更新时间
+	SalesmanData              []*Salesman              //销售员每日销售记录
+	SalesmanTime              time.Time                //数据更新时间
+	SalesSummaryData          []*SalesSummary          //销售员总销售记录
+	SalesSummaryTime          time.Time                //数据更新时间
+	ImportantCustomerData     []*ImportantCustomer     //重点客户
+	ImportantCustomerTime     time.Time                //数据更新时间
+	LostImportantCustomerData []*LostImportantCustomer //丢失重要客户
+	LostImportantCustomerTime time.Time                //数据更新时间
+	NewImportantCustomerData  []*NewImportantCustomer  //新增重要客户
+	NewImportantCustomerTime  time.Time                //数据更新时间
+}
+
+func (mc *MemoryCache) InitMemoryCache(db *sql.DB) {
+	if db == nil {
+		log.Println("MemoryCache的数据库实例为空")
+		return
+	}
+	mc.db = db
+	now := time.Now()
+	mc.InventoryData = GetInventory(mc.db)
+	mc.InventoryTime = now
+	mc.InventorySummaryData = GetInventorySummary(mc.db)
+	mc.InventorySummaryTime = now
+	mc.DebtData = GetDebt(mc.db)
+	mc.DebtTime = now
+	mc.SalesmanData = GetSalesRecord(mc.db)
+	mc.SalesmanTime = now
+	mc.SalesSummaryData = GetSalesSummary(mc.db)
+	mc.SalesSummaryTime = now
+}
+
+// 判断是否需要更新缓存，如果数据超过了一分钟，则更新，否则不更新
+func (mc *MemoryCache) GetMemoryCache(data interface{}) {
+	if mc.db == nil {
+		log.Println("MemoryCache的数据库实例为空")
+		return
+	}
+	var duration time.Duration
+	switch v := data.(type) {
+	case []*Inventory:
+		duration = time.Since(mc.InventoryTime)
+		if duration.Minutes() > 1.0 {
+			mc.InventoryData = GetInventory(mc.db)
+			mc.InventoryTime = time.Now()
+		}
+		v = mc.InventoryData
+	case []*InventorySummary:
+		duration = time.Since(mc.InventorySummaryTime)
+		if duration.Minutes() > 1.0 {
+			mc.InventorySummaryData = GetInventorySummary(mc.db)
+			mc.InventorySummaryTime = time.Now()
+		}
+		data = mc.InventorySummaryData
+	case []*Debt:
+		duration = time.Since(mc.DebtTime)
+		if duration.Minutes() > 1.0 {
+			mc.DebtData = GetDebt(mc.db)
+			mc.DebtTime = time.Now()
+		}
+		data = mc.DebtData
+	case []*Salesman:
+		duration = time.Since(mc.SalesmanTime)
+		if duration.Minutes() > 1.0 {
+			mc.SalesmanData = GetSalesRecord(mc.db)
+			mc.SalesmanTime = time.Now()
+		}
+		data = mc.SalesmanData
+	case []*SalesSummary:
+		duration = time.Since(mc.SalesSummaryTime)
+		if duration.Minutes() > 1.0 {
+			mc.SalesSummaryData = GetSalesSummary(mc.db)
+			mc.SalesSummaryTime = time.Now()
+		}
+		data = mc.SalesSummaryData
+	case ImportantCustomer:
+	case LostImportantCustomer:
+	case NewImportantCustomer:
+	default:
+		log.Println("CheckUpdataCache无法匹配类型:", v)
+	}
+}
+
 // 库存表对应dbo.View_KC
 type Inventory struct {
 	//select 产品型号,产品名称,产品描述,产品类型名称,主类型名称,产品单位名称,城市名称,仓库名称,库存数量,库存成本,最近30天销售数量,消纳时间 from dbo.View_KC

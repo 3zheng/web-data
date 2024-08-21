@@ -149,62 +149,61 @@ func SetGinRouterByHtml(r *gin.Engine, db *sql.DB, projectPath string) {
 }
 
 // 返回内容为json格式的字符串
-func SetGinRouterByJson(r *gin.Engine, db *sql.DB) {
+func SetGinRouterByJson(r *gin.Engine, mc *tablemiddleware.MemoryCache) {
 	r.GET("/api/inventory_warehouse", func(c *gin.Context) {
 		//var inventories [](*tablestruct.Inventory)
 		log.Println("/inventory_warehouse GET require")
-		datas := tablemiddleware.GetInventory(db)
+		var datas []*tablemiddleware.Inventory
+		mc.GetMemoryCache(&datas)
 		c.JSON(200, datas)
 	})
 	r.GET("/api/inventory_summary", func(c *gin.Context) {
 		//var inventories [](*tablestruct.Inventory)
 		log.Println("/inventory_summary GET require")
-		datas := tablemiddleware.GetInventorySummary(db)
+		var datas []*tablemiddleware.InventorySummary
+		mc.GetMemoryCache(&datas)
 		c.JSON(200, datas)
 	})
 	r.GET("/api/debt", func(c *gin.Context) {
 		//var inventories [](*tablestruct.Inventory)
 		log.Println("/debt GET require")
-		datas := tablemiddleware.GetDebt(db)
+		var datas []*tablemiddleware.Debt
+		mc.GetMemoryCache(&datas)
 		c.JSON(200, datas)
 	})
 	r.GET("/api/sales_record", func(c *gin.Context) {
 		//var inventories [](*tablestruct.Inventory)
 		log.Println("/sales_detail GET require")
-		datas := tablemiddleware.GetSalesRecord(db)
-		c.JSON(200, datas)
-	})
-	r.GET("/api/key_customer", func(c *gin.Context) {
-		//var inventories [](*tablestruct.Inventory)
-		log.Println("/key_customer GET require")
-		datas := tablemiddleware.GetImportantCustomer(db)
-		c.JSON(200, datas)
-	})
-	r.GET("/api/lost_key_customer", func(c *gin.Context) {
-		//var inventories [](*tablestruct.Inventory)
-		log.Println("/lost_key_customer GET require")
-		datas := tablemiddleware.GetLostImportantCustomeromer(db)
-		c.JSON(200, datas)
-	})
-	r.GET("/api/new_key_customer", func(c *gin.Context) {
-		//var inventories [](*tablestruct.Inventory)
-		log.Println("/new_key_customer GET require")
-		datas := tablemiddleware.GetNewImportantCustomer(db)
+		var datas []*tablemiddleware.Salesman
+		mc.GetMemoryCache(&datas)
 		c.JSON(200, datas)
 	})
 	r.GET("/api/sales_summary", func(c *gin.Context) {
 		//var inventories [](*tablestruct.Inventory)
 		log.Println("/sales_summary GET require")
-		datas := tablemiddleware.GetSalesSummary(db)
+		var datas []*tablemiddleware.SalesSummary
+		mc.GetMemoryCache(&datas)
 		c.JSON(200, datas)
+	})
+	r.GET("/api/key_customer", func(c *gin.Context) {
+		//var inventories [](*tablestruct.Inventory)
+		log.Println("/key_customer GET require")
+	})
+	r.GET("/api/lost_key_customer", func(c *gin.Context) {
+		//var inventories [](*tablestruct.Inventory)
+		log.Println("/lost_key_customer GET require")
+	})
+	r.GET("/api/new_key_customer", func(c *gin.Context) {
+		//var inventories [](*tablestruct.Inventory)
+		log.Println("/new_key_customer GET require")
 	})
 
 	//从mysql数据库里取数据
 	r.GET("/wp1", func(c *gin.Context) {
 		//var inventories [](*tablestruct.Inventory)
 		log.Println("/QK GET require")
-		datas := tablemiddleware.GetWordpress(db)
-		c.JSON(200, datas)
+		//datas := tablemiddleware.GetWordpress(mc.)
+		//c.JSON(200, datas)
 	})
 }
 
@@ -257,8 +256,10 @@ func main() {
 
 	r := gin.Default()
 	r.Use(cors.Default()) //使用cors，解决跨域问题
+	mc := new(tablemiddleware.MemoryCache)
+	mc.InitMemoryCache(db)
 	//SetGinRouterByHtml(r, db, config.Server.Path)//直接返回Html网页，把前端后端放一起
-	SetGinRouterByJson(r, db) //返回json数据，前端后端分离，后端只返回数据，前端不管
+	SetGinRouterByJson(r, mc) //返回json数据，前端后端分离，后端只返回数据，前端不管
 
 	log.Println("开始启动web服务")
 	addr := fmt.Sprintf("%s:%d", config.Server.IP, config.Server.Port)
