@@ -15,6 +15,8 @@ func CreatePanic() {
 	}
 }
 
+type EmptyInterface interface{}
+
 // 缓存，把数据库数据存放在MemoryCache里加快访问速度
 type MemoryCache struct {
 	db                        *sql.DB                  //数据库实例
@@ -22,11 +24,13 @@ type MemoryCache struct {
 	InventoryTime             time.Time                //数据更新时间
 	InventorySummaryData      []*InventorySummary      //仓储概述
 	InventorySummaryTime      time.Time                //数据更新时间
-	DebtData                  []*Debt                  //欠款信息
-	DebtTime                  time.Time                //数据更新时间
-	SalesmanData              []*Salesman              //销售员每日销售记录
+	DebtDailyData             []*DebtDaily             //欠款信息
+	DebtDailyTime             time.Time                //数据更新时间
+	DebtSummaryData           []*DebtSummary           //欠款信息
+	DebtSummaryTime           time.Time                //数据更新时间
+	SalesmanDailyData         []*SalesmanDaily         //销售员每日销售记录
 	SalesmanTime              time.Time                //数据更新时间
-	SalesSummaryData          []*SalesSummary          //销售员总销售记录
+	SalesmanMonthlyData       []*SalesmanMonthly       //销售员总销售记录
 	SalesSummaryTime          time.Time                //数据更新时间
 	ImportantCustomerData     []*ImportantCustomer     //重点客户
 	ImportantCustomerTime     time.Time                //数据更新时间
@@ -42,17 +46,83 @@ func (mc *MemoryCache) InitMemoryCache(db *sql.DB) {
 		return
 	}
 	mc.db = db
-	now := time.Now()
-	mc.InventoryData = GetInventory(mc.db)
-	mc.InventoryTime = now
-	mc.InventorySummaryData = GetInventorySummary(mc.db)
-	mc.InventorySummaryTime = now
-	mc.DebtData = GetDebt(mc.db)
-	mc.DebtTime = now
-	mc.SalesmanData = GetSalesRecord(mc.db)
-	mc.SalesmanTime = now
-	mc.SalesSummaryData = GetSalesSummary(mc.db)
-	mc.SalesSummaryTime = now
+	/*
+		now := time.Now()
+		mc.InventoryData = GetInventory(mc.db)
+		mc.InventoryTime = now
+		mc.InventorySummaryData = GetInventorySummary(mc.db)
+		mc.InventorySummaryTime = now
+		mc.DebtData = GetDebt(mc.db)
+		mc.DebtTime = now
+		mc.SalesmanData = GetSalesManRecord(mc.db)
+		mc.SalesmanTime = now
+		mc.SalesSummaryData = GetSalesSummary(mc.db)
+		mc.SalesSummaryTime = now
+	*/
+	//启动定时更新协程
+	ch := make(chan *MemoryCache)
+	go UpdateCacheCyclically(ch)
+	ch <- mc
+}
+
+// 循环更新
+func UpdateCacheCyclically(ch chan *MemoryCache) {
+	mc := <-ch
+	var tks [10]*time.Ticker
+	for i, _ := range tks {
+		tks[i] = time.NewTicker(1 * time.Minute)
+		defer tks[i].Stop()
+		time.Sleep(2 * time.Second)
+	}
+
+	for {
+		select {
+		case v := <-tks[0].C:
+			log.Println("tk0时间:", v)
+			if data := GetInventory(mc.db); data != nil {
+				mc.InventoryData = data
+				mc.ImportantCustomerTime = v
+			}
+		case v := <-tks[1].C:
+			log.Println("tk1时间:", v)
+			if data := GetInventorySummary(mc.db); data != nil {
+				mc.InventorySummaryData = data
+				mc.InventorySummaryTime = v
+			}
+		case v := <-tks[2].C:
+			log.Println("tk2时间:", v)
+			if data := GetDebtDaily(mc.db); data != nil {
+				mc.DebtDailyData = data
+				mc.DebtDailyTime = v
+			}
+		case v := <-tks[3].C:
+			log.Println("tk3时间:", v)
+			if data := GetSalesManDailyRecord(mc.db); data != nil {
+				mc.SalesmanDailyData = data
+				mc.SalesmanTime = v
+			}
+		case v := <-tks[4].C:
+			log.Println("tk4时间:", v)
+			if data := GetSalesmanMonthlyRecord(mc.db); data != nil {
+				mc.SalesmanMonthlyData = data
+				mc.SalesSummaryTime = v
+			}
+		case v := <-tks[5].C:
+			log.Println("tk5时间:", v)
+			if data := GetDebtSummary(mc.db); data != nil {
+				mc.DebtSummaryData = data
+				mc.DebtSummaryTime = v
+			}
+		case v := <-tks[6].C:
+			log.Println("tk5时间:", v)
+		case v := <-tks[7].C:
+			log.Println("tk5时间:", v)
+		case v := <-tks[8].C:
+			log.Println("tk5时间:", v)
+		case v := <-tks[9].C:
+			log.Println("tk5时间:", v)
+		}
+	}
 }
 
 // 判断是否需要更新缓存，如果数据超过了一分钟，则更新，否则不更新
@@ -61,43 +131,26 @@ func (mc *MemoryCache) GetMemoryCache(data interface{}) {
 		log.Println("MemoryCache的数据库实例为空")
 		return
 	}
-	var duration time.Duration
+	//取消即时更新，全部数据都从内存中取
+	//var duration time.Duration
 	switch v := data.(type) {
-	case []*Inventory:
-		duration = time.Since(mc.InventoryTime)
-		if duration.Minutes() > 1.0 {
-			mc.InventoryData = GetInventory(mc.db)
-			mc.InventoryTime = time.Now()
-		}
-		v = mc.InventoryData
-	case []*InventorySummary:
-		duration = time.Since(mc.InventorySummaryTime)
-		if duration.Minutes() > 1.0 {
-			mc.InventorySummaryData = GetInventorySummary(mc.db)
-			mc.InventorySummaryTime = time.Now()
-		}
-		data = mc.InventorySummaryData
-	case []*Debt:
-		duration = time.Since(mc.DebtTime)
-		if duration.Minutes() > 1.0 {
-			mc.DebtData = GetDebt(mc.db)
-			mc.DebtTime = time.Now()
-		}
-		data = mc.DebtData
-	case []*Salesman:
-		duration = time.Since(mc.SalesmanTime)
-		if duration.Minutes() > 1.0 {
-			mc.SalesmanData = GetSalesRecord(mc.db)
-			mc.SalesmanTime = time.Now()
-		}
-		data = mc.SalesmanData
-	case []*SalesSummary:
-		duration = time.Since(mc.SalesSummaryTime)
-		if duration.Minutes() > 1.0 {
-			mc.SalesSummaryData = GetSalesSummary(mc.db)
-			mc.SalesSummaryTime = time.Now()
-		}
-		data = mc.SalesSummaryData
+	case *[]*Inventory:
+		//duration = time.Since(mc.InventoryTime)
+		//if duration.Minutes() > 1.0 {
+		//	mc.InventoryData = GetInventory(mc.db)
+		//	mc.InventoryTime = time.Now()
+		//}
+		*v = mc.InventoryData
+	case *[]*InventorySummary:
+		*v = mc.InventorySummaryData
+	case *[]*DebtDaily:
+		*v = mc.DebtDailyData
+	case *[]*DebtSummary:
+		*v = mc.DebtSummaryData
+	case *[]*SalesmanDaily:
+		*v = mc.SalesmanDailyData
+	case *[]*SalesmanMonthly:
+		*v = mc.SalesmanMonthlyData
 	case ImportantCustomer:
 	case LostImportantCustomer:
 	case NewImportantCustomer:
@@ -202,7 +255,7 @@ func GetInventorySummary(db *sql.DB) [](*InventorySummary) {
 }
 
 // 欠款表对应dbo.View_QK
-type Debt struct {
+type DebtDaily struct {
 	//select 欠款客户名称,欠款金额,金额单位,欠款订单时间,欠款时长,时间单位,销售员,欠款客户编号,销售员编号 from dbo.View_QK
 	DebtorName    string  `json:"DebtorName"`    //欠款客户名称
 	DebtAmount    float64 `json:"DebtAmount"`    //欠款金额
@@ -215,7 +268,7 @@ type Debt struct {
 	SalesmanID    int     `json:"SalesmanID"`    //销售员编号
 }
 
-func GetDebt(db *sql.DB) [](*Debt) {
+func GetDebtDaily(db *sql.DB) [](*DebtDaily) {
 	//编写查询语句
 	//select 欠款客户名称,欠款金额,金额单位,欠款订单时间,欠款时长,时间单位,销售员,欠款客户编号,销售员编号 from dbo.View_QK
 	stmt, err := db.Prepare(`select trim(欠款客户名称),欠款金额,trim(金额单位),欠款订单时间,欠款时长,
@@ -231,10 +284,10 @@ func GetDebt(db *sql.DB) [](*Debt) {
 		log.Println("Query failed:", err.Error())
 	}
 	//将数据读取到实体中
-	var rowsData [](*Debt)
+	var rowsData [](*DebtDaily)
 	var OrderFormDate time.Time
 	for rows.Next() {
-		data := new(Debt)
+		data := new(DebtDaily)
 		//其中一个字段的信息 ， 如果要获取更多，就在后面增加：rows.Scan(&row.Name,&row.Id)
 		rows.Scan(&data.DebtorName, &data.DebtAmount, &data.CurrencyUnit, &OrderFormDate,
 			&data.DebtDuration, &data.DateUnit, &data.Salesman,
@@ -245,8 +298,39 @@ func GetDebt(db *sql.DB) [](*Debt) {
 	return rowsData
 }
 
+// 和DebtDaily对应同一张表
+type DebtSummary struct {
+	Salesman   string  `json:"Salesman"`   //销售员
+	DebtAmount float64 `json:"DebtAmount"` //欠款金额
+	DebtNum    int     `json:"DebtNum"`    //欠款笔数
+}
+
+func GetDebtSummary(db *sql.DB) [](*DebtSummary) {
+	//编写查询语句
+	stmt, err := db.Prepare(`select trim(销售员),sum(欠款金额),count(0) from dbo.View_QK group by 销售员`)
+	if err != nil {
+		log.Println("Prepare failed:", err.Error())
+		return nil
+	}
+	defer stmt.Close()
+	//执行查询语句
+	rows, err := stmt.Query()
+	if err != nil {
+		log.Println("Query failed:", err.Error())
+	}
+	//将数据读取到实体中
+	var rowsData [](*DebtSummary)
+	for rows.Next() {
+		data := new(DebtSummary)
+		//其中一个字段的信息 ， 如果要获取更多，就在后面增加：rows.Scan(&row.Name,&row.Id)
+		rows.Scan(&data.Salesman, &data.DebtAmount, &data.DebtNum)
+		rowsData = append(rowsData, data)
+	}
+	return rowsData
+}
+
 // 销售员每日销售额表对应dbo.View_XS1
-type Salesman struct {
+type SalesmanDaily struct {
 	//select 销售日期,销售员姓名,销售总金额,订单数量 from dbo.View_XS1
 	SalesDate    string  `json:"SalesDate"`    //销售日期
 	Name         string  `json:"Name"`         //销售员姓名
@@ -255,10 +339,10 @@ type Salesman struct {
 }
 
 // 销售员的每日销售记录
-func GetSalesRecord(db *sql.DB) [](*Salesman) {
+func GetSalesManDailyRecord(db *sql.DB) [](*SalesmanDaily) {
 	//编写查询语句
 	//select 销售日期,销售员姓名,销售总金额,订单数量 from dbo.View_XS1
-	stmt, err := db.Prepare(`select 销售日期,trim(销售员姓名),销售总金额,订单数量 from dbo.View_XS1 order by 销售日期 desc`)
+	stmt, err := db.Prepare(`select 销售日期,trim(销售员姓名),销售总金额,订单数量 from dbo.View_XS1 order by 销售日期 desc, trim(销售员姓名)`)
 	if err != nil {
 		log.Println("Prepare failed:", err.Error())
 		return nil
@@ -271,10 +355,10 @@ func GetSalesRecord(db *sql.DB) [](*Salesman) {
 		return nil
 	}
 	//将数据读取到实体中
-	var rowsData [](*Salesman)
+	var rowsData [](*SalesmanDaily)
 	var SalesDate time.Time
 	for rows.Next() {
-		data := new(Salesman)
+		data := new(SalesmanDaily)
 		//其中一个字段的信息 ， 如果要获取更多，就在后面增加：rows.Scan(&row.Name,&row.Id)
 		rows.Scan(&SalesDate, &data.Name, &data.SalesAmount, &data.OrderFormNum)
 		data.SalesDate = SalesDate.Format(time.DateOnly)
@@ -284,16 +368,17 @@ func GetSalesRecord(db *sql.DB) [](*Salesman) {
 }
 
 // 和Salesman同一张表
-type SalesSummary struct {
+type SalesmanMonthly struct {
 	Salesman        string  `json:"Salesman"`     //销售员
-	SalesAmount     float64 `json:"SalesAmount"`  //销售总额
-	OrderFormAmount int     `json:"OrderFormNum"` //成交总单数
+	SalesMonth      string  `json:"SalesMonth"`   //具体月份，格式为yyyy-MM
+	SalesAmount     float64 `json:"SalesAmount"`  //月销售总额
+	OrderFormAmount int     `json:"OrderFormNum"` //月成交单数
 }
 
-func GetSalesSummary(db *sql.DB) [](*SalesSummary) {
+func GetSalesmanMonthlyRecord(db *sql.DB) [](*SalesmanMonthly) {
 	//编写查询语句
 	//select 客户ID,客户姓名,月开始日期,月购买总金额,月购买次数 from dbo.CustomerYearlySalesReport
-	stmt, err := db.Prepare(`select trim(销售员姓名), sum(销售总金额), sum(订单数量) from View_XS1 group by 销售员姓名`)
+	stmt, err := db.Prepare(`select trim(销售员姓名),FORMAT(销售日期, 'yyyy-MM') as smonth, sum(销售总金额), sum(订单数量)  from View_XS1 group by 销售员姓名, FORMAT(销售日期, 'yyyy-MM')  order by smonth desc`)
 	if err != nil {
 		log.Println("Prepare failed:", err.Error())
 		return nil
@@ -306,11 +391,11 @@ func GetSalesSummary(db *sql.DB) [](*SalesSummary) {
 		return nil
 	}
 	//将数据读取到实体中
-	var rowsData [](*SalesSummary)
+	var rowsData [](*SalesmanMonthly)
 	for rows.Next() {
-		data := new(SalesSummary)
+		data := new(SalesmanMonthly)
 		//其中一个字段的信息 ， 如果要获取更多，就在后面增加：rows.Scan(&row.Name,&row.Id)
-		rows.Scan(&data.Salesman, &data.SalesAmount, &data.OrderFormAmount)
+		rows.Scan(&data.Salesman, &data.SalesMonth, &data.SalesAmount, &data.OrderFormAmount)
 		rowsData = append(rowsData, data)
 	}
 	return rowsData

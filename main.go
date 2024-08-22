@@ -100,7 +100,7 @@ func SetGinRouterByHtml(r *gin.Engine, db *sql.DB, projectPath string) {
 	r.GET("/QK", func(c *gin.Context) {
 		//var inventories [](*tablestruct.Inventory)
 		log.Println("/QK GET require")
-		datas := tablemiddleware.GetDebt(db)
+		datas := tablemiddleware.GetDebtDaily(db)
 		c.HTML(http.StatusOK, "qk.html", gin.H{
 			"data": datas,
 		})
@@ -109,7 +109,7 @@ func SetGinRouterByHtml(r *gin.Engine, db *sql.DB, projectPath string) {
 	r.GET("/XS1", func(c *gin.Context) {
 		//var inventories [](*tablestruct.Inventory)
 		log.Println("/XS1 GET require")
-		datas := tablemiddleware.GetSalesRecord(db)
+		datas := tablemiddleware.GetSalesManDailyRecord(db)
 		c.HTML(http.StatusOK, "xs1.html", gin.H{
 			"data": datas,
 		})
@@ -148,6 +148,23 @@ func SetGinRouterByHtml(r *gin.Engine, db *sql.DB, projectPath string) {
 
 }
 
+func SelectResponseJson[T any](c *gin.Context, datas []*T) {
+	var partialDatas []*T
+	vol := c.Query("volume") //获取volume参数
+	if len(datas) > 200 {
+		partialDatas = datas[:200]
+	} else {
+		partialDatas = datas
+	}
+	if vol == "all" {
+		c.JSON(http.StatusOK, datas) //发送所有数据
+	} else if vol == "partial" {
+		c.JSON(http.StatusOK, partialDatas) //发送部分数据
+	} else {
+		c.JSON(http.StatusOK, datas) //发送所有数据
+	}
+}
+
 // 返回内容为json格式的字符串
 func SetGinRouterByJson(r *gin.Engine, mc *tablemiddleware.MemoryCache) {
 	r.GET("/api/inventory_warehouse", func(c *gin.Context) {
@@ -155,35 +172,42 @@ func SetGinRouterByJson(r *gin.Engine, mc *tablemiddleware.MemoryCache) {
 		log.Println("/inventory_warehouse GET require")
 		var datas []*tablemiddleware.Inventory
 		mc.GetMemoryCache(&datas)
-		c.JSON(200, datas)
+		SelectResponseJson(c, datas)
 	})
 	r.GET("/api/inventory_summary", func(c *gin.Context) {
 		//var inventories [](*tablestruct.Inventory)
 		log.Println("/inventory_summary GET require")
 		var datas []*tablemiddleware.InventorySummary
 		mc.GetMemoryCache(&datas)
-		c.JSON(200, datas)
+		SelectResponseJson(c, datas)
 	})
-	r.GET("/api/debt", func(c *gin.Context) {
+	r.GET("/api/debt_daily", func(c *gin.Context) {
 		//var inventories [](*tablestruct.Inventory)
-		log.Println("/debt GET require")
-		var datas []*tablemiddleware.Debt
+		log.Println("/debt_daily GET require")
+		var datas []*tablemiddleware.DebtDaily
 		mc.GetMemoryCache(&datas)
-		c.JSON(200, datas)
+		SelectResponseJson(c, datas)
+	})
+	r.GET("/api/debt_summary", func(c *gin.Context) {
+		//var inventories [](*tablestruct.Inventory)
+		log.Println("/debt_summary GET require")
+		var datas []*tablemiddleware.DebtSummary
+		mc.GetMemoryCache(&datas)
+		c.JSON(http.StatusOK, datas)
 	})
 	r.GET("/api/sales_record", func(c *gin.Context) {
 		//var inventories [](*tablestruct.Inventory)
 		log.Println("/sales_detail GET require")
-		var datas []*tablemiddleware.Salesman
+		var datas []*tablemiddleware.SalesmanDaily
 		mc.GetMemoryCache(&datas)
-		c.JSON(200, datas)
+		SelectResponseJson(c, datas)
 	})
 	r.GET("/api/sales_summary", func(c *gin.Context) {
 		//var inventories [](*tablestruct.Inventory)
 		log.Println("/sales_summary GET require")
-		var datas []*tablemiddleware.SalesSummary
+		var datas []*tablemiddleware.SalesmanMonthly
 		mc.GetMemoryCache(&datas)
-		c.JSON(200, datas)
+		SelectResponseJson(c, datas)
 	})
 	r.GET("/api/key_customer", func(c *gin.Context) {
 		//var inventories [](*tablestruct.Inventory)
