@@ -20,7 +20,7 @@ type EmptyInterface interface{}
 // 缓存，把数据库数据存放在MemoryCache里加快访问速度
 type MemoryCache struct {
 	db                        *sql.DB                  //数据库实例
-	InventoryData             []*Inventory             //仓储详情：按ID、仓库名排序
+	InventoryData             []*InventoryDetail       //仓储详情：按ID、仓库名排序
 	InventoryTime             time.Time                //数据更新时间
 	InventorySummaryData      []*InventorySummary      //仓储概述
 	InventorySummaryTime      time.Time                //数据更新时间
@@ -38,6 +38,12 @@ type MemoryCache struct {
 	LostImportantCustomerTime time.Time                //数据更新时间
 	NewImportantCustomerData  []*NewImportantCustomer  //新增重要客户
 	NewImportantCustomerTime  time.Time                //数据更新时间
+	InventoryLPZData          []*InventoryCity         //拉巴斯La Paz仓储详情
+	InventoryLPZTime          time.Time                //数据更新时间
+	InventoryCBBData          []*InventoryCity         //库查巴马Cochabamba仓储详情
+	InventoryCBBTime          time.Time                //数据更新时间
+	InventorySCZData          []*InventoryCity         //圣克鲁斯Santa Cruz仓储详情
+	InventorySCZTime          time.Time                //数据更新时间
 }
 
 func (mc *MemoryCache) InitMemoryCache(db *sql.DB) {
@@ -79,7 +85,7 @@ func UpdateCacheCyclically(ch chan *MemoryCache) {
 		select {
 		case v := <-tks[0].C:
 			log.Println("tk0时间:", v)
-			if data := GetInventory(mc.db); data != nil {
+			if data := GetInventoryDetail(mc.db); data != nil {
 				mc.InventoryData = data
 				mc.ImportantCustomerTime = v
 			}
@@ -114,19 +120,31 @@ func UpdateCacheCyclically(ch chan *MemoryCache) {
 				mc.DebtSummaryTime = v
 			}
 		case v := <-tks[6].C:
-			log.Println("tk5时间:", v)
+			log.Println("tk6时间:", v)
+			if data := GetInventoryByCity(mc.db, "Santa Cruz"); data != nil {
+				mc.InventorySCZData = data
+				mc.InventorySCZTime = v
+			}
+			if data := GetInventoryByCity(mc.db, "La Paz"); data != nil {
+				mc.InventoryLPZData = data
+				mc.InventoryLPZTime = v
+			}
+			if data := GetInventoryByCity(mc.db, "Cochabamba"); data != nil {
+				mc.InventoryCBBData = data
+				mc.InventoryCBBTime = v
+			}
 		case v := <-tks[7].C:
-			log.Println("tk5时间:", v)
+			log.Println("tk7时间:", v)
 		case v := <-tks[8].C:
-			log.Println("tk5时间:", v)
+			log.Println("tk8时间:", v)
 		case v := <-tks[9].C:
-			log.Println("tk5时间:", v)
+			log.Println("tk9时间:", v)
 		}
 	}
 }
 
 // 判断是否需要更新缓存，如果数据超过了一分钟，则更新，否则不更新
-func (mc *MemoryCache) GetMemoryCache(data interface{}) {
+func (mc *MemoryCache) GetMemoryCache(data interface{}, parameters ...string) {
 	if mc.db == nil {
 		log.Println("MemoryCache的数据库实例为空")
 		return
@@ -134,7 +152,7 @@ func (mc *MemoryCache) GetMemoryCache(data interface{}) {
 	//取消即时更新，全部数据都从内存中取
 	//var duration time.Duration
 	switch v := data.(type) {
-	case *[]*Inventory:
+	case *[]*InventoryDetail:
 		//duration = time.Since(mc.InventoryTime)
 		//if duration.Minutes() > 1.0 {
 		//	mc.InventoryData = GetInventory(mc.db)
@@ -151,6 +169,20 @@ func (mc *MemoryCache) GetMemoryCache(data interface{}) {
 		*v = mc.SalesmanDailyData
 	case *[]*SalesmanMonthly:
 		*v = mc.SalesmanMonthlyData
+	case *[]*InventoryCity:
+		if len(parameters) < 1 {
+			return
+		}
+		para1 := parameters[0]
+		if para1 == "CBB" {
+			*v = mc.InventoryCBBData
+		} else if para1 == "LPZ" {
+			*v = mc.InventoryLPZData
+		} else if para1 == "SCZ" {
+			*v = mc.InventorySCZData
+		} else {
+			log.Println("InventoryCity的参数未知：", para1)
+		}
 	case ImportantCustomer:
 	case LostImportantCustomer:
 	case NewImportantCustomer:
@@ -160,7 +192,7 @@ func (mc *MemoryCache) GetMemoryCache(data interface{}) {
 }
 
 // 库存表对应dbo.View_KC
-type Inventory struct {
+type InventoryDetail struct {
 	//select 产品型号,产品名称,产品描述,产品类型名称,主类型名称,产品单位名称,城市名称,仓库名称,库存数量,库存成本,最近30天销售数量,消纳时间 from dbo.View_KC
 	ProductID           string  `json:"ID"`                  //产品型号
 	ProductName         string  `json:"Name"`                //产品名称
@@ -176,12 +208,12 @@ type Inventory struct {
 	UnsalableScale      float64 `json:"UnsalableScale"`      //消纳时间 = 库存数量/最近30天销售数量,表示库存将在多少个月内售罄,相当于滞销度
 }
 
-func GetInventory(db *sql.DB) [](*Inventory) {
+func GetInventoryDetail(db *sql.DB) [](*InventoryDetail) {
 	//编写查询语句
 	//select 产品型号,产品名称,产品描述,产品类型名称,主类型名称,产品单位名称,城市名称,仓库名称,库存数量,库存成本,最近30天销售数量,消纳时间 from dbo.View_KC
 	sqlStr := `select trim(产品型号),trim(产品名称),trim(产品描述),trim(产品类型名称),trim(主类型名称),trim(产品单位名称),` +
 		`trim(城市名称),trim(仓库名称),库存数量,库存成本,最近30天销售数量,消纳时间 ` +
-		`from dbo.View_KC order by 产品型号,仓库名称`
+		` from dbo.View_KC order by 产品型号,仓库名称`
 	//sqlStr := `select 产品型号,产品名称,最近30天销售数量,消纳时间 from dbo.View_KC`
 	stmt, err := db.Prepare(sqlStr)
 	if err != nil {
@@ -189,6 +221,7 @@ func GetInventory(db *sql.DB) [](*Inventory) {
 		return nil
 	}
 	defer stmt.Close()
+
 	//执行查询语句
 	rows, err := stmt.Query()
 	if err != nil {
@@ -196,15 +229,63 @@ func GetInventory(db *sql.DB) [](*Inventory) {
 		return nil
 	}
 	//将数据读取到实体中
-	var rowsData [](*Inventory)
+	var rowsData [](*InventoryDetail)
 	for rows.Next() {
-		data := new(Inventory)
+		data := new(InventoryDetail)
 		//其中一个字段的信息 ， 如果要获取更多，就在后面增加：rows.Scan(&row.Name,&row.Id)
 		rows.Scan(&data.ProductID, &data.ProductName, &data.ProductDescription,
 			&data.ProductSubclass, &data.ProductSuperClass, &data.ProductUnitName, &data.CityName,
 			&data.WarehouseName, &data.ResidualNum, &data.InventoryCost, &data.SalesQuantity30days,
 			&data.UnsalableScale)
 
+		rowsData = append(rowsData, data)
+	}
+	return rowsData
+}
+
+// 库存表对应dbo.View_KC
+type InventoryCity struct {
+	//select 产品型号,产品名称,产品描述,产品类型名称,主类型名称,产品单位名称,城市名称,仓库名称,库存数量,库存成本,最近30天销售数量,消纳时间 from dbo.View_KC
+	ProductID            string  `json:"ID"`                   //产品型号
+	ProductName          string  `json:"Name"`                 //产品名称
+	ProductDescription   string  `json:"Descrption"`           //产品描述
+	ProductSubclass      string  `json:"Subclass"`             //产品类型名称,二级分类
+	ProductSuperClass    string  `json:"ProductSuperClass"`    //主类型名称,一级分类
+	ResidualNum          float64 `json:"ResidualNum"`          //库存数量
+	InventoryCost        float64 `json:"InventoryCost"`        //库存成本
+	SalesQuantity180days float64 `json:"SalesQuantity180days"` //最近180天销售数量
+}
+
+func GetInventoryByCity(db *sql.DB, cityName string) [](*InventoryCity) {
+	//编写查询语句，参数化查询?表示占位符，后面在stmt.Query()传入参数，有多少个?传递多少个参数
+	//select trim(产品型号),trim(产品名称),trim(产品描述),trim(产品类型名称),trim(主类型名称),trim(城市名称),sum(库存数量),sum(库存成本),sum(最近180天销售数量) from dbo.View_KC3 where trim(城市名称) = ? group by 产品型号,产品名称,产品描述,产品类型名称,主类型名称 order by 产品型号
+	sqlStr := `select trim(产品型号),trim(产品名称),trim(产品描述),trim(产品类型名称), ` +
+		`trim(主类型名称),sum(库存数量),sum(库存成本),sum(最近180天销售数量) as amount ` +
+		` from dbo.View_KC3 where trim(城市名称) = ? ` +
+		` group by 产品型号,产品名称,产品描述,产品类型名称,主类型名称 order by amount desc `
+	//sqlStr := `select 产品型号,产品名称,最近30天销售数量,消纳时间 from dbo.View_KC`
+	stmt, err := db.Prepare(sqlStr)
+	if err != nil {
+		log.Println("Prepare failed:", err.Error())
+		return nil
+	}
+	defer stmt.Close()
+
+	//执行查询语句
+	rows, err := stmt.Query(cityName)
+	if err != nil {
+		log.Println("Query failed:", err.Error())
+		return nil
+	}
+	//将数据读取到实体中
+	var rowsData [](*InventoryCity)
+	for rows.Next() {
+		data := new(InventoryCity)
+		//其中一个字段的信息 ， 如果要获取更多，就在后面增加：rows.Scan(&row.Name,&row.Id)
+		rows.Scan(&data.ProductID, &data.ProductName, &data.ProductDescription,
+			&data.ProductSubclass, &data.ProductSuperClass,
+			&data.ResidualNum, &data.InventoryCost, &data.SalesQuantity180days,
+		)
 		rowsData = append(rowsData, data)
 	}
 	return rowsData
@@ -493,7 +574,6 @@ type NewImportantCustomer struct {
 func GetNewImportantCustomer(db *sql.DB) [](*NewImportantCustomer) {
 	//编写查询语句
 	//select 客户ID,客户姓名,月开始日期,月购买总金额,月购买次数 from dbo.CustomerYearlySalesReport
-
 	stmt, err := db.Prepare(`select 客户ID,客户姓名,月开始日期,月购买总金额,月购买次数 from dbo.CustomerYearlySalesReport`)
 	if err != nil {
 		log.Println("Prepare failed:", err.Error())

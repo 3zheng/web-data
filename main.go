@@ -82,7 +82,7 @@ func SetGinRouterByHtml(r *gin.Engine, db *sql.DB, projectPath string) {
 	r.GET("/KC", func(c *gin.Context) {
 		//var inventories [](*tablestruct.Inventory)
 		log.Println("/KC GET require")
-		datas := tablemiddleware.GetInventory(db)
+		datas := tablemiddleware.GetInventoryDetail(db)
 		c.HTML(http.StatusOK, "index.html", gin.H{
 			"data": datas,
 		})
@@ -170,7 +170,7 @@ func SetGinRouterByJson(r *gin.Engine, mc *tablemiddleware.MemoryCache) {
 	r.GET("/api/inventory_warehouse", func(c *gin.Context) {
 		//var inventories [](*tablestruct.Inventory)
 		log.Println("/inventory_warehouse GET require")
-		var datas []*tablemiddleware.Inventory
+		var datas []*tablemiddleware.InventoryDetail
 		mc.GetMemoryCache(&datas)
 		SelectResponseJson(c, datas)
 	})
@@ -179,6 +179,14 @@ func SetGinRouterByJson(r *gin.Engine, mc *tablemiddleware.MemoryCache) {
 		log.Println("/inventory_summary GET require")
 		var datas []*tablemiddleware.InventorySummary
 		mc.GetMemoryCache(&datas)
+		SelectResponseJson(c, datas)
+	})
+	r.GET("/api/inventory_city", func(c *gin.Context) {
+		//var inventories [](*tablestruct.Inventory)
+		log.Println("/inventory_city GET require")
+		var datas []*tablemiddleware.InventoryCity
+		cityName := c.Query("city") //获取city参数
+		mc.GetMemoryCache(&datas, cityName)
 		SelectResponseJson(c, datas)
 	})
 	r.GET("/api/debt_daily", func(c *gin.Context) {
