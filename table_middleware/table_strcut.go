@@ -76,9 +76,9 @@ func UpdateCacheCyclically(ch chan *MemoryCache) {
 	mc := <-ch
 	var tks [10]*time.Ticker
 	for i, _ := range tks {
-		tks[i] = time.NewTicker(1 * time.Minute)
+		tks[i] = time.NewTicker(3 * time.Minute)
 		defer tks[i].Stop()
-		time.Sleep(2 * time.Second)
+		time.Sleep(5 * time.Second)
 	}
 
 	for {

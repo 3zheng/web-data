@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"runtime"
+	"time"
 
 	tablemiddleware "github.com/3zheng/web-data/table_middleware"
 	_ "github.com/denisenkom/go-mssqldb"
@@ -39,26 +40,56 @@ type Config struct {
 	MysqlConn string       `json:"mysqlConn"`
 }
 
-func InitLog() {
+func CreateNewFile(config Config, now time.Time) *os.File {
 	var filepath string
-	fmt.Println(runtime.GOOS)
 	if runtime.GOOS == "windows" {
-		filepath = "./logfile"
+		filepath = "./log/logfile-"
 	} else if runtime.GOOS == "linux" {
-		filepath = "/home/wuzhibin86/workspace/web-data/logfile"
+		filepath = config.Server.Path + "log/logfile-"
 	} else {
 		fmt.Println("系统不明")
 		os.Exit(0)
 	}
+	today := fmt.Sprintf("%04d%02d%02d", now.Year(), now.Month(), now.Day())
+	filepath = filepath + today
 	logFile, err := os.OpenFile(filepath, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
 	if err != nil {
 		fmt.Println("open log file failed.")
-		return
+		return nil
 	}
 	log.SetOutput(logFile)
 	log.SetFlags(log.LstdFlags | log.Lshortfile | log.Ltime)
 	log.Println("log file opened.")
+	return logFile
+}
 
+func InitLog(config Config) {
+	now := time.Now()
+	logFile := CreateNewFile(config, now) //创建日志文件
+	// 获取第二天凌晨的时间
+	nextMidnight := time.Date(now.Year(), now.Month(), now.Day()+1, 0, 0, 0, 0, now.Location())
+	// 计算时间差
+	duration := nextMidnight.Sub(now)
+	// 输出秒数
+	fmt.Printf("距离第二天凌晨还有 %v 秒\n", int(duration.Seconds()))
+	time.Sleep(duration) //第一天的程序启动时间是不确定的，使用Sleep到第二天的凌晨0点0分
+	tk := time.NewTicker(24 * time.Hour)
+	//监听单个channel可以用for range替代for select
+	for now := range tk.C {
+		if logFile != nil {
+			logFile.Close()
+		}
+		logFile = CreateNewFile(config, now)
+	}
+	/*
+		for {
+			select {
+			case now := <-tk.C:
+				//dosomething
+			}
+		}
+	*/
+	log.Println("退出InitLog")
 }
 
 func Recovermain() {
@@ -241,7 +272,6 @@ func SetGinRouterByJson(r *gin.Engine, mc *tablemiddleware.MemoryCache) {
 
 func main() {
 	defer Recovermain() //退出前打印异常
-	InitLog()
 	//读取配置文件
 	args := os.Args //main命令行参数
 	log.Println("main args = ", args)
@@ -267,6 +297,7 @@ func main() {
 		log.Fatal("Error during Unmarshal(): ", err)
 	}
 
+	go InitLog(config) //初始化日志服务
 	//mysql的连接字符串格式
 	//connString := "username:password@tcp(127.0.0.1:3306)/dbname?charset=utf8"
 
@@ -279,7 +310,7 @@ func main() {
 	if err != nil {
 		log.Fatal("Open Connection failed:", err.Error())
 	}
-
+	log.Println("建立数据库连接")
 	//db, err := sql.Open("mysql", connString)
 	defer db.Close()
 
