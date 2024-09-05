@@ -66,19 +66,21 @@ func CreateNewFile(config Config, now time.Time) *os.File {
 func InitLog(config Config) {
 	now := time.Now()
 	logFile := CreateNewFile(config, now) //创建日志文件
-	// 获取第二天凌晨的时间00:05,不精准定位在00:00,以免创建新文件时还在前一天
-	nextMidnight := time.Date(now.Year(), now.Month(), now.Day()+1, 0, 5, 0, 0, now.Location())
+	// 获取第二天凌晨的时间00:01,不精准定位在00:00,以免创建新文件时还在前一天
+	nextMidnight := time.Date(now.Year(), now.Month(), now.Day()+1, 0, 1, 0, 0, now.Location())
 	// 计算时间差
 	duration := nextMidnight.Sub(now)
 	// 输出秒数
 	log.Printf("距离第二天凌晨还有 %v 秒\n", int(duration.Seconds()))
-	time.Sleep(duration) //第一天的程序启动时间是不确定的，使用Sleep到第二天的凌晨0点0分
-	log.Println("Sleep到凌晨")
-	tk := time.NewTicker(24 * time.Hour)
+	//time.Sleep(duration) //第一天的程序启动时间是不确定的，使用Sleep到第二天的凌晨0点0分
+	//log.Println("Sleep到凌晨")
+	//第一天的程序启动时间是不确定的，先把定时器调整为到第二天凌晨
+	tk := time.NewTicker(duration)
 	//tk := time.NewTicker(5 * time.Minute)
 	//监听单个channel可以用for range替代for select
 	for now := range tk.C {
 		log.Println("定时器时间到")
+		tk.Reset(24 * time.Hour) //重置为24小时
 		if logFile != nil {
 			logFile.Close()
 		} else {
@@ -304,6 +306,7 @@ func main() {
 	}
 
 	go InitLog(config) //初始化日志服务
+	CatchSighup()      //捕捉linux信号
 	//mysql的连接字符串格式
 	//connString := "username:password@tcp(127.0.0.1:3306)/dbname?charset=utf8"
 
