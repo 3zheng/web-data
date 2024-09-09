@@ -7,40 +7,22 @@ import (
 	"log"
 	"net"
 	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"runtime"
 	"time"
 
-	tablemiddleware "github.com/3zheng/web-data/table_middleware"
+	config "WebData/config"
+	tablemiddleware "WebData/table_middleware"
+
+	//tablemiddleware "github.com/3zheng/web-data/table_middleware"
 	_ "github.com/denisenkom/go-mssqldb"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
 )
 
-type DBConfig struct {
-	IP       string `json:"ip"`
-	Port     int    `json:"port"`
-	DB       string `json:"database"`
-	UserId   string `json:"user id"`
-	Password string `json:"password"`
-}
-
-// IP   string `json:"ip"`
-type ServerConfig struct {
-	Path      string `json:"path"`
-	ForceIPv4 int    `json:"force ipv4"`
-	IP        string `json:"ip"`
-	Port      int    `json:"port"`
-}
-
-type Config struct {
-	Database  DBConfig     `json:"database config"`
-	Server    ServerConfig `json:"server config"`
-	MysqlConn string       `json:"mysqlConn"`
-}
-
-func CreateNewFile(config Config, now time.Time) *os.File {
+func CreateNewFile(config config.Config, now time.Time) *os.File {
 	var filepath string
 	if runtime.GOOS == "windows" {
 		filepath = "./log/logfile-"
@@ -63,7 +45,7 @@ func CreateNewFile(config Config, now time.Time) *os.File {
 	return logFile
 }
 
-func InitLog(config Config) {
+func InitLog(config config.Config) {
 	now := time.Now()
 	logFile := CreateNewFile(config, now) //创建日志文件
 	// 获取第二天凌晨的时间00:01,不精准定位在00:00,以免创建新文件时还在前一天
@@ -268,6 +250,23 @@ func SetGinRouterByJson(r *gin.Engine, mc *tablemiddleware.MemoryCache) {
 		//var inventories [](*tablestruct.Inventory)
 		log.Println("/new_key_customer GET require")
 	})
+	r.POST("/api/login", func(c *gin.Context) {
+		log.Println("/login POST require")
+		var request config.UserInfo
+		request.UserName = c.Query("userName") //获取参数
+		request.Password = c.Query("password") //
+		var datas config.Response
+		if mc.CheckUserPassword(request) {
+			datas.Success = "true" //校验成功
+			log.Printf("name=%s,passwd=%s通过验证", request.UserName, request.Password)
+			c.JSON(http.StatusOK, datas)
+		} else {
+			datas.Success = "false" //校验失败
+			log.Printf("name=%s,passwd=%s验证失败", request.UserName, request.Password)
+			c.JSON(http.StatusOK, datas)
+		}
+
+	})
 
 	//从mysql数据库里取数据
 	r.GET("/wp1", func(c *gin.Context) {
@@ -297,9 +296,13 @@ func main() {
 		return
 	}
 
+	go func() {
+		log.Println(http.ListenAndServe(":6060", nil))
+	}()
+
 	//tablemiddleware.CreatePanic()
 	// Now let's unmarshall the data into `payload`
-	var config Config
+	var config config.Config
 	err = json.Unmarshal(content, &config)
 	if err != nil {
 		log.Fatal("Error during Unmarshal(): ", err)
@@ -329,7 +332,7 @@ func main() {
 	r := gin.Default()
 	r.Use(cors.Default()) //使用cors，解决跨域问题
 	mc := new(tablemiddleware.MemoryCache)
-	mc.InitMemoryCache(db)
+	mc.InitMemoryCache(db, config)
 	//SetGinRouterByHtml(r, db, config.Server.Path)//直接返回Html网页，把前端后端放一起
 	SetGinRouterByJson(r, mc) //返回json数据，前端后端分离，后端只返回数据，前端不管
 

@@ -3,14 +3,14 @@ module WebData
 go 1.21.6
 
 require (
-	github.com/3zheng/web-data/table_middleware v0.0.0
+	//github.com/3zheng/web-data/table_middleware v0.0.0
 	github.com/denisenkom/go-mssqldb v0.12.3
 	github.com/gin-contrib/cors v1.7.2
 	github.com/gin-gonic/gin v1.10.0
 	github.com/go-sql-driver/mysql v1.8.1
 )
 
-replace github.com/3zheng/web-data/table_middleware v0.0.0 => ./table_middleware
+//replace github.com/3zheng/web-data/table_middleware v0.0.0 => ./table_middleware
 
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect

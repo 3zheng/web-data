@@ -1,6 +1,7 @@
 package tablestruct
 
 import (
+	config "WebData/config"
 	"database/sql"
 	"log"
 	"os"
@@ -20,6 +21,7 @@ type EmptyInterface interface{}
 // 缓存，把数据库数据存放在MemoryCache里加快访问速度
 type MemoryCache struct {
 	db                        *sql.DB                  //数据库实例
+	Config                    config.Config            //配置文件
 	InventoryData             []*InventoryDetail       //仓储详情：按ID、仓库名排序
 	InventoryTime             time.Time                //数据更新时间
 	InventorySummaryData      []*InventorySummary      //仓储概述
@@ -46,12 +48,13 @@ type MemoryCache struct {
 	InventorySCZTime          time.Time                //数据更新时间
 }
 
-func (mc *MemoryCache) InitMemoryCache(db *sql.DB) {
+func (mc *MemoryCache) InitMemoryCache(db *sql.DB, config config.Config) {
 	if db == nil {
 		log.Println("MemoryCache的数据库实例为空")
 		return
 	}
 	mc.db = db
+	mc.Config = config
 	/*
 		now := time.Now()
 		mc.InventoryData = GetInventory(mc.db)
@@ -78,7 +81,7 @@ func UpdateCacheCyclically(ch chan *MemoryCache) {
 	for i, _ := range tks {
 		tks[i] = time.NewTicker(3 * time.Minute)
 		defer tks[i].Stop()
-		time.Sleep(5 * time.Second)
+		time.Sleep(5 * time.Second) //每隔5秒设置一个定时器
 	}
 
 	for {
@@ -141,6 +144,16 @@ func UpdateCacheCyclically(ch chan *MemoryCache) {
 			log.Println("tk9时间:", v)
 		}
 	}
+}
+
+// 校验用户密码
+func (mc *MemoryCache) CheckUserPassword(user config.UserInfo) bool {
+	for _, v := range mc.Config.Users {
+		if user.UserName == v.UserName && user.Password == v.Password {
+			return true
+		}
+	}
+	return false
 }
 
 // 判断是否需要更新缓存，如果数据超过了一分钟，则更新，否则不更新
